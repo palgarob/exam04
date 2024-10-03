@@ -14,7 +14,7 @@ char	**take_command(char **argv)
 	{
 		if (*argv[i] != '|')
 		{
-			char	**split = ft_split(argv[i])
+			char	**split = ft_split(argv[i]);
 		}
 		else
 
