@@ -28,7 +28,7 @@ void	redirect(t_pipex *pipex)
 
 }
 
-void	exec_fork(char **argv, int init, int n, t_pipex *pipex, char **envp)
+void	exec_fork(char **argv, t_pipex *pipex, char **envp)
 {
 	pid_t	pid;
 	char	*arguments;
@@ -77,50 +77,50 @@ void	free_pipex(t_pipex  pipex)
 
 }
 
-char	**take_command(char **argv, char **envp)
+char	**otro_rollo(char **argv, char **envp)
 {
-	int		i;
-	t_pipex	*pipex;
-	int init = 0;
-	int	n = init;
+	int i;
+	t_pipex *pipex;
+	char	*buf;
 
 	pipex = NULL;
-	for (i = 0; *argv[i] != ';' && *argv[i + 1]; i++)
+	for (i = 0; *argv[i] != ';' && argv[i]; i++)
 	{
 		if (*argv[i] == '|')
 		{
-			if (!pipex)
-			{
-				pipex = (t_pipex *)malloc(sizeof(t_pipex));
-				pipex->next = NULL;
-			}
-			else
-				append_pipe_struct(pipex);
-			create_pipe(pipex);
-			exec_fork(argv, init, n, pipex, envp);
+			pipex = (t_pipex *)malloc(sizeof(pipex));
+			pipex->next = NULL;
+			buf = argv[i];
+			argv[i] = NULL;
+			exec_fork()
 		}
-		else
-			n++;
 	}
-	if (!pipex)
+}
+
+char	**take_command(char **argv, char **envp)
+{
+	int		i;
+
+	for (i = 0; *argv[i] != ';' && argv[i]; i++)
 	{
-		if (execve(*arguments, arguments, envp))
-		{
-			write(2, "error: cannot execute ", 22);
-			write(2, *arguments, 9);
-			write(2, "\n", 1);
-			exit(1);
-		}
+		if (*argv[i] == '|')
+			return (otro_rollo(argv, envp));
 	}
-	else
-		free_pipex(pipex);
-	if (arguments) free_arguments(arguments);
+	if (execve(*argv, argv, envp))
+	{
+		write(2, "error: cannot execute ", 22);
+		write(2, *argv, ft_strlen(*argv));
+		write(2, "\n", 1);
+		exit(1);
+	}
+	argv[i] = buf;
+	return (argv + i);
 }
 
 int	main(int argc, char **argv, char **envp)
 {
 	argv++;
-	while (argv)
+	while (*argv)
 		argv = take_command(argv, envp); // Esto devuelve lo que haya justo después de ';' o un puntero nulo si ya ha dejado de leer
 	return (0);
 }
