@@ -6,115 +6,42 @@
 
 #include <stdio.h>
 
-typedef struct s_pipex
-{
-	int				pipe_end[2];
-	struct s_pipex	*next;
-}	t_pipex;
-
-void	create_pipe(t_pipex *pipex)
-{
-	while (pipex->next != NULL) pipex = pipex->next;
-	if (pipe(pipex->pipe_end < 0))
-	{
-		write(STDERR_FILENO, "error: fatal\n", 13);
-		exit(1);
-	}
-}
-
-void	redirect(t_pipex *pipex)
-{
-	while (pipex->next != NULL) pipex = pipex->next;
-
-}
-
-void	exec_fork(char **argv, t_pipex *pipex, char **envp)
-{
-	pid_t	pid;
-	char	*arguments;
-
-	pid = fork();
-	if (pid < 0)
-	{
-		write(STDERR_FILENO, "error: fatal\n", 13);
-		exit(1);
-	}
-	if (!pid)
-	{
-		redirect(pipex);
-		arguments = argv + init;
-		arguments[n + 1] = NULL;
-		if (execve(arguments[init], arguments, envp))
-		{
-			write(2, "error: cannot execute ", 22);
-			write(2, *arguments, 9);
-			write(2, "\n", 1);
-			exit(1);
-		}
-	}
-}
-
-void	append_pipe_struct(t_pipex *pipex)
-{
-	while (pipex->next != NULL) pipex = pipex->next;
-	pipex->next = (t_pipex *)malloc(sizeof(t_pipex));
-	pipex->next->next = NULL;
-}
-
-void	free_arguments(char **arguments)
-{
-	for (int i = 0; arguments[i]; i++)
-		free(arguments[i]);
-}
-
-size_t	ft_strlen(char *str)
-{
-
-}
-
-void	free_pipex(t_pipex  pipex)
-{
-
-}
-
-char	**otro_rollo(char **argv, char **envp)
+int	there_are_pipes(char **argv)
 {
 	int i;
-	t_pipex *pipex;
-	char	*buf;
 
-	pipex = NULL;
-	for (i = 0; *argv[i] != ';' && argv[i]; i++)
+	for (i = 0; argv[i] && *argv[i] != ';'; i++)
+		if (*argv[i] == '|') return (i);
+	return (-i);
+}
+
+char	**exec_with_pipe(int *r_pipe, char **argv, char **envp)
+{
+	int	pipex[2]; if (pipe(pipex) < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+	
+	pid_t	pid; pid = fork(); if (pid < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+	if (!pid)
 	{
-		if (*argv[i] == '|')
+		if (r_pipe > 0)
 		{
-			pipex = (t_pipex *)malloc(sizeof(pipex));
-			pipex->next = NULL;
-			buf = argv[i];
-			argv[i] = NULL;
-			exec_fork()
+			if (dup2(r_pipe, STDIN_FILENO) < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+			close(r_pipe);
 		}
+		if (dup2(pipex[1], STDOUT_FILENO) < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+		close (pipex[1]);
+		close (pipex[0]);
+		argv[there_are_pipes(argv)] = NULL;
+		if (execve(*argv, argv, envp)) {write(STDERR_FILENO, "error: cannot execute ", 22), write(STDERR_FILENO, *argv, ft_strlen(*argv)); write(STDERR_FILENO, "\n", 1);}
 	}
+	if (there_are_pipes(argv[there_are_pipes(argv) + 1]) > 0)
+		return (exec_with_pipe(pipex[0], &argv[there_are_pipes(argv) + 1], envp));
+	
 }
 
 char	**take_command(char **argv, char **envp)
 {
-	int		i;
-
-	for (i = 0; *argv[i] != ';' && argv[i]; i++)
-	{
-		if (*argv[i] == '|')
-			return (otro_rollo(argv, envp));
-	}
-	if (execve(*argv, argv, envp))
-	{
-		write(2, "error: cannot execute ", 22);
-		write(2, *argv, ft_strlen(*argv));
-		write(2, "\n", 1);
-		exit(1);
-	}
-	argv[i] = buf;
-	return (argv + i);
+	if (there_are_pipes(argv) > 0) return ((exec_with_pipe)-1, argv, envp);
+	else return (exec_wo_pipe(-1, argv, envp));
 }
 
 int	main(int argc, char **argv, char **envp)
