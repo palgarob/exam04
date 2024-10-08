@@ -15,27 +15,27 @@ int	find_pipe(char **argv)
 	return (-i);
 }
 
-size_t	ft_strlen(char *str)
+void	print_err(char *str)
 {
 	size_t i = 0;
 
 	while (str[i]) i++;
-	return (i);
+	write(STDERR_FILENO, str, i);
 }
 
 char	**exec_last(int *last_pipe, char **argv, char **envp)
 {
-	pid_t	pid; pid = fork(); if (pid < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+	pid_t	pid; pid = fork(); if (pid < 0) {print_err("error: fatal\n"); exit(1);}
 	if (!pid)
 	{
 		if (last_pipe)
 		{
-			if (dup2(last_pipe[0], STDIN_FILENO) < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+			if (dup2(last_pipe[0], STDIN_FILENO) < 0) {print_err("error: fatal\n"); exit(1);}
 			close(last_pipe[1]);
 			close(last_pipe[0]);
 		}
 		argv[-find_pipe(argv)] = NULL;
-		if (execve(*argv, argv, envp)) {write(STDERR_FILENO, "error: cannot execute ", 23), write(STDERR_FILENO, *argv, ft_strlen(*argv)); write(STDERR_FILENO, "\n", 1);}
+		if (execve(*argv, argv, envp)) {print_err("error: cannot execute "); print_err(*argv); print_err("\n");}
 	}
 	if (last_pipe) {close(last_pipe[1]); close(last_pipe[0]);}
 	waitpid(pid, &return_value, 0);
@@ -44,22 +44,22 @@ char	**exec_last(int *last_pipe, char **argv, char **envp)
 
 char	**exec_pipe(int *last_pipe, char **argv, char **envp)
 {
-	int	pipex[2]; if (pipe(pipex) < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+	int	pipex[2]; if (pipe(pipex) < 0) {print_err("error: fatal\n"); exit(1);}
 	
-	pid_t	pid; pid = fork(); if (pid < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+	pid_t	pid; pid = fork(); if (pid < 0) {print_err("error: fatal\n"); exit(1);}
 	if (!pid)
 	{
 		if (last_pipe)
 		{
-			if (dup2(last_pipe[0], STDIN_FILENO) < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+			if (dup2(last_pipe[0], STDIN_FILENO) < 0) {print_err("error: fatal\n"); exit(1);}
 			close(last_pipe[0]);
 			close(last_pipe[1]);
 		}
-		if (dup2(pipex[1], STDOUT_FILENO) < 0) {write(STDERR_FILENO, "error: fatal\n", 13); exit(1);}
+		if (dup2(pipex[1], STDOUT_FILENO) < 0) {print_err("error: fatal\n"); exit(1);}
 		close(pipex[1]);
 		close(pipex[0]);
 		argv[find_pipe(argv)] = NULL;
-		if (execve(*argv, argv, envp)) {write(STDERR_FILENO, "error: cannot execute ", 22), write(STDERR_FILENO, *argv, ft_strlen(*argv)); write(STDERR_FILENO, "\n", 1);}
+		if (execve(*argv, argv, envp)) {print_err("error: cannot execute "), print_err(*argv); print_err("\n");}
 	}
 	if (last_pipe) {close(last_pipe[1]); close(last_pipe[0]);}
 	if (find_pipe(&argv[find_pipe(argv) + 1]) > 0)
@@ -71,13 +71,8 @@ char	**exec_pipe(int *last_pipe, char **argv, char **envp)
 
 char	**exec_builtin(char **argv)
 {
-	if (find_pipe(argv) != -2) {write(STDERR_FILENO, "error: cd: bad arguments\n", 25); return (&argv[-find_pipe(argv)]);}
-	if (chdir(argv[1]))
-	{
-		write(STDERR_FILENO, "error: cd: cannot change directory to ", 38);
-		write(STDERR_FILENO, argv[1], ft_strlen(argv[1]));
-		write(STDERR_FILENO, "\n", 1);
-	}
+	if (find_pipe(argv) != -2) {print_err("error: cd: bad arguments\n"); return (&argv[-find_pipe(argv)]);}
+	if (chdir(argv[1])) {print_err("error: cd: cannot change directory to "); print_err(argv[1]); print_err("\n");}
 	return (&argv[-find_pipe(argv)]);
 }
 
