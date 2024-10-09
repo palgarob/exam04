@@ -4,6 +4,9 @@
 #include <string.h>
 #include <sys/wait.h>
 
+#include <errno.h>
+#include <stdio.h>
+
 static int return_value;
 
 int	find_pipe(char **argv)
@@ -30,12 +33,12 @@ char	**exec_last(int *last_pipe, char **argv, char **envp)
 	{
 		if (last_pipe)
 		{
-			if (dup2(last_pipe[0], STDIN_FILENO) < 0) {print_err("error: fatal\n"); exit(1);}
+			if (dup2(last_pipe[0], STDIN_FILENO) < 0) {print_err("erxror: fatal\n"); exit(1);}
 			close(last_pipe[1]);
 			close(last_pipe[0]);
 		}
 		argv[-find_pipe(argv)] = NULL;
-		if (execve(*argv, argv, envp)) {print_err("error: cannot execute "); print_err(*argv); print_err("\n");}
+		if (execve(*argv, argv, envp)) {print_err("error: cannot execute "); print_err(*argv); print_err("\n"); exit(1);}
 	}
 	if (last_pipe) {close(last_pipe[1]); close(last_pipe[0]);}
 	waitpid(pid, &return_value, 0);
@@ -45,7 +48,7 @@ char	**exec_last(int *last_pipe, char **argv, char **envp)
 char	**exec_pipe(int *last_pipe, char **argv, char **envp)
 {
 	int	pipex[2]; if (pipe(pipex) < 0) {print_err("error: fatal\n"); exit(1);}
-	
+
 	pid_t	pid; pid = fork(); if (pid < 0) {print_err("error: fatal\n"); exit(1);}
 	if (!pid)
 	{
@@ -56,10 +59,9 @@ char	**exec_pipe(int *last_pipe, char **argv, char **envp)
 			close(last_pipe[1]);
 		}
 		if (dup2(pipex[1], STDOUT_FILENO) < 0) {print_err("error: fatal\n"); exit(1);}
-		close(pipex[1]);
-		close(pipex[0]);
+		close(pipex[1]); close(pipex[0]);
 		argv[find_pipe(argv)] = NULL;
-		if (execve(*argv, argv, envp)) {print_err("error: cannot execute "), print_err(*argv); print_err("\n");}
+		if (execve(*argv, argv, envp)) {print_err("error: cannot execute "), print_err(*argv); print_err("\n"); exit(1);}
 	}
 	if (last_pipe) {close(last_pipe[1]); close(last_pipe[0]);}
 	if (find_pipe(&argv[find_pipe(argv) + 1]) > 0)
@@ -83,12 +85,16 @@ char	**take_command(char **argv, char **envp)
 	else return (exec_last(NULL, argv, envp));
 }
 
-int	main(int argc, char **argv, char **envp)
-{
+int	main(__attribute__((unused)) int argc, char **argv, char **envp)
+{ 
 	argv++;
 	while (*argv)
 	{
-		if (!strcmp(";", *argv)) argv++;
+		while (!strcmp(";", *argv)) {
+			argv++;
+			if (!*argv) break;
+		}
+		if (!*argv) break;
 		argv = take_command(argv, envp);
 	}
 	return (return_value);
